@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "809720672457",
+    "project_id": "water-conditioner-6822b",
+    "storage_bucket": "water-conditioner-6822b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:809720672457:android:4ae4110084dfee59ffdd18",
+        "android_client_info": {
+          "package_name": "com.example.water_conditioner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkFbuAQZv-tQM6ohUp38boA66lGCZGZW8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

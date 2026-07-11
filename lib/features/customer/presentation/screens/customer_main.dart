@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
+
 import '../../../../core/constants/app_colors.dart';
 import 'customer_dashboard_page.dart';
 import 'customer_history_page.dart';
@@ -29,11 +31,23 @@ class _CustomerMainState extends State<CustomerMain> {
   @override
   void initState() {
     super.initState();
+
     pages = [
-      CustomerDashboardPage(deviceId: widget.deviceId, userId: widget.userId),
-      CustomerServicePage(deviceId: widget.deviceId, userId: widget.userId),
-      CustomerHistoryPage(userId: widget.userId),
-      CustomerProfilePage(userId: widget.userId, deviceId: widget.deviceId),
+      CustomerDashboardPage(
+        deviceId: widget.deviceId,
+        userId: widget.userId,
+      ),
+      CustomerServicePage(
+        deviceId: widget.deviceId,
+        userId: widget.userId,
+      ),
+      CustomerHistoryPage(
+        userId: widget.userId,
+      ),
+      CustomerProfilePage(
+        userId: widget.userId,
+        deviceId: widget.deviceId,
+      ),
     ];
   }
 
@@ -44,45 +58,74 @@ class _CustomerMainState extends State<CustomerMain> {
         centerTitle: true,
         title: Text(
           "Water Conditioner",
-          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold, color: AppColors.textWhite),
+          style: TextStyle(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textWhite,
+          ),
         ),
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,
       ),
+
       body: IndexedStack(
         index: selectedIndex,
         children: pages,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: selectedIndex,
-        onTap: (i) {
-          setState(() {
-            selectedIndex = i;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primaryBlue,
-        unselectedItemColor: AppColors.textSecondary,
-        selectedLabelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontSize: 12.sp),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: "Dashboard",
+
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: 10.w,
+          vertical: 18.h,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.blue, // Light grey background
+        ),
+        child: SafeArea(
+          top: false,
+          child: GNav(
+            selectedIndex: selectedIndex,
+            onTabChange: (index) {
+              setState(() {
+                selectedIndex = index;
+              });
+            },
+
+            gap: 8,
+
+            padding: EdgeInsets.symmetric(
+              horizontal: 18.w,
+              vertical: 14.h,
+            ),
+
+            backgroundColor: Colors.transparent,
+
+            color: Colors.white,
+            activeColor: AppColors.primaryBlue,
+
+            // Selected tab background
+            tabBackgroundColor: Colors.white,
+
+            tabs: const [
+              GButton(
+                icon: Icons.dashboard_rounded,
+                text: 'Dashboard',
+              ),
+              GButton(
+                icon: Icons.build_rounded,
+                text: 'Service',
+              ),
+              GButton(
+                icon: Icons.history,
+                text: 'History',
+              ),
+              GButton(
+                icon: Icons.person,
+                text: 'Profile',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.build),
-            label: "Service",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: "History",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: "Profile",
-          ),
-        ],
+        ),
       ),
     );
   }

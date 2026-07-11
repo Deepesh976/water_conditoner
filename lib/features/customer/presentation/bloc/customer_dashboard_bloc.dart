@@ -38,7 +38,9 @@ class CustomerDashboardFailure extends CustomerDashboardState {
   final String message;
   CustomerDashboardFailure({required this.message});
 }
-class CustomerDashboardBloc extends Bloc<CustomerDashboardEvent, CustomerDashboardState> {
+
+class CustomerDashboardBloc
+    extends Bloc<CustomerDashboardEvent, CustomerDashboardState> {
   final FetchDeviceUsecase fetchDeviceUsecase;
   final FetchDashboardDataUsecase fetchDashboardDataUsecase;
   final FetchComplaintHistoryUsecase fetchComplaintHistoryUsecase;
@@ -52,20 +54,37 @@ class CustomerDashboardBloc extends Bloc<CustomerDashboardEvent, CustomerDashboa
     on<RefreshDashboard>(_onRefreshDashboard);
   }
 
-  Future<void> _onLoadDashboard(LoadDashboard event, Emitter<CustomerDashboardState> emit) async {
+  // ================= LOAD DASHBOARD =================
+  Future<void> _onLoadDashboard(
+      LoadDashboard event, Emitter<CustomerDashboardState> emit) async {
     emit(CustomerDashboardLoading());
+
     try {
+      print("🔥 LOAD DASHBOARD for userId: ${event.userId}");
+
       final deviceData = await fetchDeviceUsecase(event.userId);
+
+      print("🔥 DEVICE DATA FROM API: $deviceData");
+
       final deviceId = deviceData["_id"] ?? "";
       final deviceName = deviceData["deviceId"] ?? "RO Device";
 
+      print("🔥 DEVICE ID FROM BACKEND: $deviceId");
+
       if (deviceId.isEmpty) {
+        print("❌ No device assigned");
         emit(CustomerDashboardFailure(message: "No device assigned."));
         return;
       }
 
-      final analysisData = await fetchDashboardDataUsecase(deviceId);
-      final complaints = await fetchComplaintHistoryUsecase(event.userId);
+      final analysisData =
+      await fetchDashboardDataUsecase(deviceId);
+
+      print("🔥 INITIAL API RESPONSE: $analysisData");
+
+      final complaints =
+      await fetchComplaintHistoryUsecase(event.userId);
+
       emit(CustomerDashboardLoaded(
         deviceId: deviceId,
         deviceName: deviceName,
@@ -73,21 +92,33 @@ class CustomerDashboardBloc extends Bloc<CustomerDashboardEvent, CustomerDashboa
         complaints: complaints,
       ));
     } catch (e) {
-      emit(CustomerDashboardFailure(message: e.toString().replaceAll("Exception: ", "")));
+      print("❌ LOAD ERROR: $e");
+      emit(CustomerDashboardFailure(
+          message: e.toString().replaceAll("Exception: ", "")));
     }
   }
 
-  Future<void> _onRefreshDashboard(RefreshDashboard event, Emitter<CustomerDashboardState> emit) async {
+  // ================= REFRESH DASHBOARD =================
+  Future<void> _onRefreshDashboard(
+      RefreshDashboard event, Emitter<CustomerDashboardState> emit) async {
     try {
-      final analysisData = await fetchDashboardDataUsecase(event.deviceId);
-      final complaints = await fetchComplaintHistoryUsecase(event.userId);
-      
-      // Keep previous deviceName, or set default since we refresh
+      print("🔥 REFRESH CALLED with deviceId: ${event.deviceId}");
+
+      final analysisData =
+      await fetchDashboardDataUsecase(event.deviceId);
+
+      print("🔥 REFRESH API RESPONSE: $analysisData");
+
+      final complaints =
+      await fetchComplaintHistoryUsecase(event.userId);
+
       String prevDeviceName = "RO Device";
+
       if (state is CustomerDashboardLoaded) {
-        prevDeviceName = (state as CustomerDashboardLoaded).deviceName;
+        prevDeviceName =
+            (state as CustomerDashboardLoaded).deviceName;
       }
-      
+
       emit(CustomerDashboardLoaded(
         deviceId: event.deviceId,
         deviceName: prevDeviceName,
@@ -95,7 +126,9 @@ class CustomerDashboardBloc extends Bloc<CustomerDashboardEvent, CustomerDashboa
         complaints: complaints,
       ));
     } catch (e) {
-      emit(CustomerDashboardFailure(message: e.toString().replaceAll("Exception: ", "")));
+      print("❌ REFRESH ERROR: $e");
+      emit(CustomerDashboardFailure(
+          message: e.toString().replaceAll("Exception: ", "")));
     }
   }
 }

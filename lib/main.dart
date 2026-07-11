@@ -16,9 +16,29 @@ import 'features/technician/presentation/bloc/technician_history_bloc.dart';
 import 'features/technician/presentation/bloc/technician_profile_bloc.dart';
 import 'features/technician/presentation/bloc/technician_service_bloc.dart';
 import 'features/technician/presentation/screens/technician_main.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'core/services/notification_service.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp();
+  await NotificationService.initialize();
+
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  String? token = await FirebaseMessaging.instance.getToken();
+
+  print("=================================");
+  print("FCM TOKEN: $token");
+  print("=================================");
+
 
   // Initialize Dependency Injection
   await di.init();

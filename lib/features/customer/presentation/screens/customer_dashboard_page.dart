@@ -11,7 +11,13 @@ import '../bloc/customer_dashboard_bloc.dart';
 class ChartData {
   final DateTime x;
   final double y;
-  ChartData(this.x, this.y);
+  final int alert;
+
+  ChartData(
+      this.x,
+      this.y,
+      this.alert,
+      );
 }
 
 class FlowChartData {
@@ -40,6 +46,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   bool isResetDone = false;
   bool showResetPopup = false;
   bool serviceJustCompleted = false;
+  int? selectedAlert;
   final Set<String> _localShownComplaintIds = {};
 
   @override
@@ -415,46 +422,89 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
               List sortedHistory = List.from(flowHistory);
               sortedHistory.sort((a, b) => DateTime.parse(a["recordedAt"]).compareTo(DateTime.parse(b["recordedAt"])));
 
-              Map<String, double> dailyMap = {};
+              Map<String, List<double>> dailyValues = {};
+
               for (var d in sortedHistory) {
                 DateTime dt = DateTime.parse(d["recordedAt"]).toLocal();
-                String date = "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+
+                String date =
+                    "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+
                 double value = 0;
 
-                if (selectedMetricFlow == "Ampere") {
-                  value = (d["ampere"] ?? 0).toDouble();
-                } else if (selectedMetricFlow == "Voltage") {
+                if (selectedMetricFlow == "Voltage") {
                   value = (d["voltage"] ?? 0).toDouble();
                 } else {
                   value = (d["flowRate"] ?? 0).toDouble();
                 }
-                dailyMap[date] = value;
+
+                if (!dailyValues.containsKey(date)) {
+                  dailyValues[date] = [];
+                }
+
+                dailyValues[date]!.add(value);
               }
+
+// Calculate average for each day
+              Map<String, double> dailyMap = {};
+
+              dailyValues.forEach((date, values) {
+                if (values.isNotEmpty) {
+                  double sum = values.reduce((a, b) => a + b);
+                  dailyMap[date] = sum / values.length;
+                } else {
+                  dailyMap[date] = 0;
+                }
+              });
 
               for (int i = 6; i >= 0; i--) {
                 DateTime day = DateTime.now().subtract(Duration(days: i));
                 String key = "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
                 tempFlow.add(dailyMap[key] ?? 0.0);
-                tempLabels.add("${day.day}");
+                tempLabels.add(
+                  DateFormat("d MMM").format(day),
+                );
               }
             }
 
             final List<double> displayFlowData = isResetDone ? List.generate(7, (_) => 0.0) : tempFlow;
             final List<String> labels = tempLabels;
 
-            // Prepare pressure chart data
-            final pressureHistory = data["pressureHistory"] ?? [];
+// Prepare pressure chart data (ONLY TODAY + NEW FIELD)
+            final pressureHistory = data["alertHistory"] ?? [];
+
             List<ChartData> tempPressure = [];
+
+// 🔥 Get today's start time
+            DateTime now = DateTime.now();
+            DateTime startOfDay = DateTime(now.year, now.month, now.day);
+
             for (var d in pressureHistory) {
               DateTime time = DateTime.parse(d["recordedAt"]).toLocal();
-              tempPressure.add(ChartData(time, (d["pressure"] ?? 0).toDouble()));
+
+              // 🔥 ONLY TODAY DATA (0–24 hrs)
+              if (time.isAfter(startOfDay)) {
+                tempPressure.add(
+                  ChartData(
+                    time,
+                    ((d["alert"] ?? 0) > 0) ? 1 : 0,
+                    d["alert"] ?? 0,
+                  ),
+                );
+              }
             }
 
-            final List<ChartData> displayPressure = isResetDone ? [] : tempPressure;
+            final List<ChartData> displayPressure = isResetDone
+                ? []
+                : selectedAlert == null
+                ? tempPressure
+                : tempPressure
+                .where((e) => e.alert == selectedAlert)
+                .toList();
 
             return RefreshIndicator(
               onRefresh: () async {
-                context.read<CustomerDashboardBloc>().add(RefreshDashboard(deviceId: state.deviceId, userId: widget.userId));
+                context.read<CustomerDashboardBloc>().add(RefreshDashboard(deviceId: widget.deviceId, userId: widget.userId));
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -535,7 +585,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 10.h),
+                    SizedBox(height: 0.5.h),
 
                     // Flow Rate Section
                     Container(
@@ -577,28 +627,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                                 lineType: TrackballLineType.vertical,
                                 builder: (BuildContext context, TrackballDetails details) {
                                   final point = details.point!;
-                                  final d = point.x as String;
+                                  final date = point.x.toString();
                                   final y = point.y;
-                                  int day = int.tryParse(d) ?? 1;
-
-                                  String getSuffix(int d) {
-                                    if (d >= 11 && d <= 13) return "th";
-                                    switch (d % 10) {
-                                      case 1:
-                                        return "st";
-                                      case 2:
-                                        return "nd";
-                                      case 3:
-                                        return "rd";
-                                      default:
-                                        return "th";
-                                    }
-                                  }
-
-                                  String monthName = [
-                                    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-                                  ][DateTime.now().month - 1];
 
                                   return Container(
                                     padding: EdgeInsets.all(8.r),
@@ -610,7 +640,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          "$day${getSuffix(day)} $monthName",
+                                          date,
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 12.sp,
@@ -618,7 +648,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                                         ),
                                         SizedBox(height: 4.h),
                                         Text(
-                                          "${(y ?? 0).toInt()} ${getUnit(selectedMetricFlow)}",
+                                          "${(y ?? 0).toStringAsFixed(1)} ${getUnit(selectedMetricFlow)}",
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 13.sp,
@@ -630,12 +660,20 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                                   );
                                 },
                               ),
-                              primaryXAxis: CategoryAxis(),
-                              primaryYAxis: NumericAxis(
-                                minimum: 0,
-                                maximum: getDynamicMax(displayFlowData),
-                                interval: (getDynamicMax(displayFlowData) / 5).clamp(1, double.infinity),
-                                edgeLabelPlacement: EdgeLabelPlacement.shift,
+                              primaryXAxis: CategoryAxis(
+                                majorGridLines: const MajorGridLines(
+                                  width: 0,
+                                ),
+                                axisLine: const AxisLine(
+                                  width: 0,
+                                ),
+                                majorTickLines: const MajorTickLines(
+                                  size: 0,
+                                ),
+                                labelStyle: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
                               ),
                               series: <CartesianSeries<FlowChartData, String>>[
                                 ColumnSeries<FlowChartData, String>(
@@ -684,16 +722,45 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              Text(
-                                getFaultCount(displayPressure) > 0
-                                    ? "⚠ ${getFaultCount(displayPressure)} Errors"
-                                    : "All Good",
-                                style: TextStyle(
-                                  color: getFaultCount(displayPressure) > 0 ? AppColors.statusRed : AppColors.statusGreen,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14.sp,
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w,
+                                  vertical: 5.h,
                                 ),
-                              ),
+                                decoration: BoxDecoration(
+                                  color: getFaultCount(displayPressure) > 0
+                                      ? Colors.red.withOpacity(.1)
+                                      : Colors.green.withOpacity(.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      getFaultCount(displayPressure) > 0
+                                          ? Icons.warning_amber_rounded
+                                          : Icons.check_circle,
+                                      size: 18,
+                                      color: getFaultCount(displayPressure) > 0
+                                          ? Colors.red
+                                          : Colors.green,
+                                    ),
+
+                                    SizedBox(width: 5),
+
+                                    Text(
+                                      getFaultCount(displayPressure) > 0
+                                          ? "${getFaultCount(displayPressure)} Errors"
+                                          : "All Good",
+                                      style: TextStyle(
+                                        color: getFaultCount(displayPressure) > 0
+                                            ? Colors.red
+                                            : Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
                             ],
                           ),
                           SizedBox(height: 12.h),
@@ -703,36 +770,46 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                               backgroundColor: Colors.transparent,
                               plotAreaBorderWidth: 0,
                               margin: EdgeInsets.only(right: 12.w),
+
                               trackballBehavior: TrackballBehavior(
                                 enable: true,
                                 activationMode: ActivationMode.singleTap,
-                                lineType: TrackballLineType.vertical,
+                                tooltipDisplayMode: TrackballDisplayMode.nearestPoint,
+                                lineType: TrackballLineType.none,
                                 builder: (BuildContext context, TrackballDetails details) {
                                   final index = details.pointIndex ?? 0;
-                                  if (index >= displayPressure.length) return const SizedBox();
-                                  final ChartData pt = displayPressure[index];
-                                  final DateTime dt = pt.x;
-                                  final value = pt.y.toInt();
 
-                                  String time = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
-                                  String status = value == 1 ? "ERROR" : "GOOD";
+                                  if (index >= displayPressure.length) {
+                                    return const SizedBox();
+                                  }
+
+                                  final ChartData pt = displayPressure[index];
 
                                   return Container(
                                     padding: EdgeInsets.all(8.r),
                                     decoration: BoxDecoration(
-                                      color: value == 1 ? AppColors.statusRed : AppColors.statusBlue,
+                                      color: pt.alert == 0
+                                          ? Colors.blue
+                                          : Colors.red,
                                       borderRadius: BorderRadius.circular(8.r),
                                     ),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(time, style: const TextStyle(color: Colors.white)),
-                                        SizedBox(height: 4.h),
                                         Text(
-                                          status,
+                                          pt.alert == 0
+                                              ? "GOOD"
+                                              : "Alert ${pt.alert}",
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          DateFormat("HH:mm").format(pt.x),
+                                          style: const TextStyle(
+                                            color: Colors.white,
                                           ),
                                         ),
                                       ],
@@ -740,49 +817,142 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                                   );
                                 },
                               ),
+
                               primaryXAxis: DateTimeAxis(
-                                minimum: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 0),
-                                maximum: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 23, 59),
-                                intervalType: DateTimeIntervalType.minutes,
-                                interval: 30,
-                                dateFormat: DateFormat.Hm(),
-                                labelStyle: TextStyle(fontSize: 10.sp),
+                                minimum: DateTime(
+                                  DateTime.now().year,
+                                  DateTime.now().month,
+                                  DateTime.now().day,
+                                  0,
+                                ),
+                                maximum: DateTime(
+                                  DateTime.now().year,
+                                  DateTime.now().month,
+                                  DateTime.now().day,
+                                  23,
+                                  59,
+                                ),
+                                intervalType: DateTimeIntervalType.hours,
+                                interval: 3,
+
+                                majorGridLines: const MajorGridLines(
+                                  width: 0,
+                                ),
+
+                                majorTickLines: const MajorTickLines(
+                                  size: 4,
+                                  width: 1,
+                                ),
+
+                                axisLine: AxisLine(
+                                  width: 2,
+                                  color: Colors.grey.shade600,
+                                ),
+
+                                dateFormat: DateFormat("HH:mm"),
+
+                                labelStyle: TextStyle(
+                                  fontSize: 10.sp,
+                                  color: Colors.black87,
+                                ),
                               ),
+
                               primaryYAxis: NumericAxis(
                                 minimum: 0,
                                 maximum: 1,
                                 interval: 1,
-                                axisLabelFormatter: (AxisLabelRenderDetails args) {
+
+                                majorGridLines: MajorGridLines(
+                                  width: 0,
+                                ),
+
+                                axisLine: AxisLine(
+                                  width: 2,
+                                  color: Colors.grey.shade400,
+                                ),
+
+                                axisLabelFormatter: (args) {
                                   if (args.value == 0) {
-                                    return ChartAxisLabel("G", const TextStyle(color: AppColors.statusBlue));
-                                  } else {
-                                    return ChartAxisLabel("E", const TextStyle(color: AppColors.statusRed));
+                                    return ChartAxisLabel(
+                                      "G",
+                                      TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18.sp,
+                                      ),
+                                    );
                                   }
+
+                                  return ChartAxisLabel(
+                                    "E",
+                                    TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18.sp,
+                                    ),
+                                  );
                                 },
                               ),
+
                               series: <CartesianSeries<ChartData, DateTime>>[
-                                LineSeries<ChartData, DateTime>(
+                                ColumnSeries<ChartData, DateTime>(
                                   dataSource: displayPressure,
                                   xValueMapper: (data, _) => data.x,
                                   yValueMapper: (data, _) => data.y,
-                                  pointColorMapper: (ChartData data, _) {
-                                    return data.y == 1 ? AppColors.statusRed : AppColors.statusBlue;
-                                  },
-                                  color: AppColors.statusBlue,
-                                  width: 2.5,
-                                  markerSettings: MarkerSettings(
+
+                                  width: 0.006,
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.zero,
+                                  enableTooltip: false,
+                                ),
+
+                                ScatterSeries<ChartData, DateTime>(
+                                  dataSource: displayPressure,
+
+                                  xValueMapper: (data, _) => data.x,
+                                  yValueMapper: (data, _) => data.y,
+
+                                  pointColorMapper: (data, _) =>
+                                  data.alert == 0
+                                      ? Colors.blue
+                                      : Colors.red,
+
+                                  opacity: 1,
+
+                                  markerSettings: const MarkerSettings(
                                     isVisible: true,
-                                    width: 8.r,
-                                    height: 8.r,
+                                    width: 10,
+                                    height: 10,
+                                    shape: DataMarkerType.circle,
                                   ),
                                 ),
                               ],
                             ),
                           ),
+                          SizedBox(height: 10.h),
+
+                          GridView.count(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            childAspectRatio: 3.5,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 8,
+                            children: [
+                              legendItem(1, "Max Voltage"),
+                              legendItem(2, "Min Voltage"),
+                              legendItem(3, "Low Flow"),
+                              legendItem(4, "Over Amp C1"),
+                              legendItem(5, "Under Amp C1"),
+                              legendItem(6, "Over Amp C2"),
+                              legendItem(7, "Under Amp C2"),
+                              legendItem(8, "Service Mode"),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 80.h),
+                    SizedBox(height: 0.5.h),
                   ],
                 ),
               ),
@@ -898,7 +1068,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
   String getUnit(String metric) {
     if (metric == "Voltage") return "V";
-    if (metric == "Ampere") return "A";
     return "L/hr";
   }
 
@@ -913,6 +1082,110 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   int getFaultCount(List<ChartData> faults) {
     if (isResetDone) return 0;
     return faults.where((d) => d.y == 1).length;
+  }
+
+  String getAlertName(int alert) {
+    switch (alert) {
+      case 1:
+        return "Max Voltage Fault";
+
+      case 2:
+        return "Min Voltage Fault";
+
+      case 3:
+        return "Low Flow";
+
+      case 4:
+        return "Over Ampere Trip Current 1";
+
+      case 5:
+        return "Under Ampere Trip Current 1";
+
+      case 6:
+        return "Over Ampere Trip Current 2";
+
+      case 7:
+        return "Under Ampere Trip Current 2";
+
+      case 8:
+        return "Service Mode";
+
+      default:
+        return "Unknown Alert";
+    }
+  }
+
+  Widget legendItem(int number, String title) {
+    final bool isSelected = selectedAlert == number;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (selectedAlert == number) {
+            selectedAlert = null;
+          } else {
+            selectedAlert = number;
+          }
+        });
+      },
+
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 4,
+        ),
+
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.red.withOpacity(.15)
+              : Colors.grey.shade100,
+
+          borderRadius: BorderRadius.circular(20),
+
+          border: Border.all(
+            color: isSelected
+                ? Colors.red
+                : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+
+              child: Center(
+                child: Text(
+                  number.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 6),
+
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget buildMetricDropdown(String selectedValue, Function(String) onChanged) {
@@ -932,7 +1205,6 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
           fontWeight: FontWeight.w500,
         ),
         items: [
-          "Ampere",
           "Voltage",
           "Lt/Hr",
         ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
