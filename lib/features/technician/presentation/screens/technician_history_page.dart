@@ -38,6 +38,22 @@ class _TechnicianHistoryPageState extends State<TechnicianHistoryPage> {
     }
   }
 
+  String getFullAddress(dynamic user) {
+    if (user == null) return "N/A";
+
+    final parts = [
+      user["flatNo"],
+      user["area"],
+      user["district"],
+      user["state"],
+      user["postalCode"],
+    ];
+
+    return parts
+        .where((e) => e != null && e.toString().trim().isNotEmpty)
+        .join(", ");
+  }
+
   Color getStatusColor(String? status) {
     switch (status) {
       case "Completed":
@@ -211,9 +227,29 @@ class _TechnicianHistoryPageState extends State<TechnicianHistoryPage> {
                                                 children: [
                                                   SizedBox(height: 12.h),
                                                   const Divider(),
-                                                  buildRow(Icons.person, "Customer", item["user"]?["name"]),
-                                                  buildRow(Icons.calendar_today, "Requested", formatDate(item["createdAt"])),
-                                                  buildRow(Icons.check_circle, "Completed", formatDate(item["completedAt"])),
+                                                  buildRow(
+                                                    Icons.person,
+                                                    "Customer",
+                                                    item["user"]?["name"],
+                                                  ),
+
+                                                  buildRow(
+                                                    Icons.location_on,
+                                                    "Address",
+                                                    getFullAddress(item["user"]),
+                                                  ),
+
+                                                  buildRow(
+                                                    Icons.calendar_today,
+                                                    "Requested",
+                                                    formatDate(item["createdAt"]),
+                                                  ),
+
+                                                  buildRow(
+                                                    Icons.check_circle,
+                                                    "Completed",
+                                                    formatDate(item["completedAt"]),
+                                                  ),
                                                 ],
                                               )
                                             : const SizedBox(),

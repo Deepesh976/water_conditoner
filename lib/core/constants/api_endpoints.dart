@@ -1,5 +1,5 @@
 class ApiEndpoints {
-  static const String baseUrl = "http://10.230.124.204:5000";
+  static const String baseUrl = "http://192.168.0.126:5000";
 
   // Auth
   static const String userLogin = "$baseUrl/api/users/login";
@@ -10,6 +10,23 @@ class ApiEndpoints {
 // Customer
   static const String complaints =
       "$baseUrl/api/complaints";
+
+  static String technicianHistory(
+      String technicianId,
+      ) =>
+      "$baseUrl/api/technicians/$technicianId/history";
+
+  static String technicianDevices(String technicianId) =>
+      "$baseUrl/api/devices/technician/$technicianId";
+
+  static String acceptInstallation(String id) =>
+      "$baseUrl/api/devices/$id/accept";
+
+  static String rejectInstallation(String id) =>
+      "$baseUrl/api/devices/$id/reject";
+
+  static String completeInstallation(String id) =>
+      "$baseUrl/api/devices/$id/install";
 
 // 🔔 Save Customer FCM Token
   static const String saveFcmToken =

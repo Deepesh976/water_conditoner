@@ -5,6 +5,33 @@ import '../../../../core/network/api_client.dart';
 
 abstract class TechnicianRemoteDataSource {
   Future<List<dynamic>> fetchJobs();
+
+  Future<List<dynamic>> fetchInstallationJobs(
+      String technicianId,
+      );
+
+  Future<List<dynamic>> fetchTechnicianHistory(
+      String technicianId,
+      );
+
+  // ================= INSTALLATION ACTIONS =================
+
+  Future<void> acceptInstallation(
+      String deviceId,
+      );
+
+  Future<void> rejectInstallation(
+      String deviceId,
+      );
+  Future<void> completeInstallation({
+    required String deviceId,
+    required String imagePath,
+    required String ampere,
+    required String voltage,
+    required String flowRate,
+    required String comment,
+  });
+
   Future<void> respondToJob({required String jobId, required String action});
   Future<void> submitReadings({
     required String jobId,
@@ -38,13 +65,135 @@ class TechnicianRemoteDataSourceImpl implements TechnicianRemoteDataSource {
 
   TechnicianRemoteDataSourceImpl({required this.apiClient});
 
+// ================= COMPLAINT JOBS =================
+
   @override
   Future<List<dynamic>> fetchJobs() async {
-    final response = await apiClient.get(ApiEndpoints.complaints);
+    final response = await apiClient.get(
+      ApiEndpoints.complaints,
+    );
+
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
       throw Exception("Failed to load jobs");
+    }
+  }
+
+// ================= INSTALLATION JOBS =================
+
+  @override
+  Future<List<dynamic>> fetchInstallationJobs(
+      String technicianId,
+      ) async {
+    print("Technician ID = $technicianId");
+
+    final response = await apiClient.get(
+      ApiEndpoints.technicianDevices(technicianId),
+    );
+
+    print("Status Code = ${response.statusCode}");
+    print("Response = ${response.body}");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        "Failed to load installation jobs",
+      );
+    }
+  }
+
+  @override
+  Future<List<dynamic>> fetchTechnicianHistory(
+      String technicianId,
+      ) async {
+    final response = await apiClient.get(
+      ApiEndpoints.technicianHistory(
+        technicianId,
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(
+        "Failed to load technician history",
+      );
+    }
+  }
+
+  // ================= INSTALLATION ACTIONS =================
+
+  @override
+  Future<void> acceptInstallation(
+      String deviceId,
+      ) async {
+    final response = await apiClient.put(
+      ApiEndpoints.acceptInstallation(deviceId),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to accept installation");
+    }
+  }
+
+  @override
+  Future<void> rejectInstallation(
+      String deviceId,
+      ) async {
+    final response = await apiClient.put(
+      ApiEndpoints.rejectInstallation(deviceId),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to reject installation");
+    }
+  }
+
+  @override
+  Future<void> completeInstallation({
+    required String deviceId,
+    required String imagePath,
+    required String ampere,
+    required String voltage,
+    required String flowRate,
+    required String comment,
+  }) async {
+
+    final image = await http.MultipartFile.fromPath(
+      "installationImage",
+      imagePath,
+    );
+
+    final streamedResponse =
+    await apiClient.multipartRequest(
+      method: "PUT",
+      url: ApiEndpoints.completeInstallation(
+        deviceId,
+      ),
+
+      fields: {
+        "ampere": ampere,
+        "voltage": voltage,
+        "flowRate": flowRate,
+        "comment": comment,
+      },
+
+      files: [
+        image,
+      ],
+    );
+
+    final response =
+    await http.Response.fromStream(
+      streamedResponse,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        "Failed to complete installation",
+      );
     }
   }
 
@@ -108,16 +257,25 @@ class TechnicianRemoteDataSourceImpl implements TechnicianRemoteDataSource {
     required Map<String, dynamic> before,
     required Map<String, dynamic> after,
   }) async {
+
     final response = await apiClient.post(
       ApiEndpoints.analysis,
       body: {
-        "device": deviceId,
-        "serviceCompleted": true,
-        "beforeServiceReadings": before,
-        "afterServiceReadings": after,
+        "deviceId": deviceId,
+        "voltage": double.tryParse(after["voltage"].toString()) ?? 0,
+        "current1": double.tryParse(after["ampere"].toString()) ?? 0,
+        "current2": 0,
+        "tds": 0,
+        "flowRate": double.tryParse(after["flow"].toString()) ?? 0,
+        "dispLitres": 0,
+        "totalHours": 0,
+        "alert": 0,
+        "signalStrength": 0,
       },
     );
+
     if (response.statusCode != 200 && response.statusCode != 201) {
+      print(response.body);
       throw Exception("Failed to post analysis");
     }
   }

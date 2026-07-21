@@ -20,6 +20,26 @@ class RespondJobRequested extends TechnicianDashboardEvent {
   });
 }
 
+class AcceptInstallationRequested extends TechnicianDashboardEvent {
+  final String deviceId;
+  final String technicianId;
+
+  AcceptInstallationRequested({
+    required this.deviceId,
+    required this.technicianId,
+  });
+}
+
+class RejectInstallationRequested extends TechnicianDashboardEvent {
+  final String deviceId;
+  final String technicianId;
+
+  RejectInstallationRequested({
+    required this.deviceId,
+    required this.technicianId,
+  });
+}
+
 abstract class TechnicianDashboardState {}
 
 class TechnicianDashboardInitial extends TechnicianDashboardState {}
@@ -51,37 +71,73 @@ class TechnicianDashboardFailure extends TechnicianDashboardState {
 
 class TechnicianDashboardBloc extends Bloc<TechnicianDashboardEvent, TechnicianDashboardState> {
   final FetchJobsUsecase fetchJobsUsecase;
+  final FetchInstallationJobsUsecase fetchInstallationJobsUsecase;
   final RespondToJobUsecase respondToJobUsecase;
+  final AcceptInstallationUsecase acceptInstallationUsecase;
+  final RejectInstallationUsecase rejectInstallationUsecase;
 
   TechnicianDashboardBloc({
     required this.fetchJobsUsecase,
+    required this.fetchInstallationJobsUsecase,
     required this.respondToJobUsecase,
+    required this.acceptInstallationUsecase,
+    required this.rejectInstallationUsecase,
   }) : super(TechnicianDashboardInitial()) {
+
     on<FetchJobsRequested>(_onFetchJobsRequested);
-    on<RespondJobRequested>(_onRespondJobRequested);
+
+    on<RespondJobRequested>(
+        _onRespondJobRequested);
+
+    on<AcceptInstallationRequested>(
+        _onAcceptInstallation);
+
+    on<RejectInstallationRequested>(
+        _onRejectInstallation);
   }
 
   Future<void> _onFetchJobsRequested(
     FetchJobsRequested event,
     Emitter<TechnicianDashboardState> emit,
   ) async {
+
+    print("========== EVENT RECEIVED ==========");
+    print("Technician ID = ${event.technicianId}");
+
     emit(TechnicianDashboardLoading());
     try {
-      final all = await fetchJobsUsecase();
+// Complaint jobs
+      final complaints = await fetchJobsUsecase();
 
-      final List<dynamic> allData = all
-          .where(
-            (c) =>
-                c["technician"] != null &&
-                c["technician"]["_id"] == event.technicianId,
-          )
-          .toList();
+// Installation jobs
+      final installations = await fetchInstallationJobsUsecase(
+        event.technicianId,
+      );
 
-      final List<dynamic> activeJobs = allData
-          .where(
-            (c) => c["status"] != "Rejected" && c["status"] != "Completed",
-          )
-          .toList();
+      print("===============");
+      print("Complaints: ${complaints.length}");
+      print("Installations: ${installations.length}");
+      print("Complaints Data:");
+      print(complaints);
+      print("Installation Data:");
+      print(installations);
+      print("===============");
+
+// Merge both lists
+      final List<dynamic> allData = [
+        ...complaints,
+        ...installations,
+      ];
+
+      final List<dynamic> activeJobs = allData.where((job) {
+        if (job["type"] == "Installation") {
+          return job["technicianStatus"] != "Rejected" &&
+              job["technicianStatus"] != "Installed";
+        }
+
+        return job["status"] != "Rejected" &&
+            job["status"] != "Completed";
+      }).toList();
 
       int pendingCount = 0;
       int completedCount = 0;
@@ -90,27 +146,65 @@ class TechnicianDashboardBloc extends Bloc<TechnicianDashboardEvent, TechnicianD
       final nowIST = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
 
       for (var job in allData) {
-        final status = job["status"];
-        if (status == "Completed") {
+
+        final bool isInstallation =
+            job["type"] == "Installation";
+
+        final status = isInstallation
+            ? job["technicianStatus"]
+            : job["status"];
+
+        // Completed Count
+        if (!isInstallation &&
+            status == "Completed") {
           completedCount++;
         }
-        if (status == "Assigned" || status == "Accepted") {
+
+        if (isInstallation &&
+            status == "Installed") {
+          completedCount++;
+        }
+
+        // Pending Count
+        if (!isInstallation &&
+            (status == "Assigned" ||
+                status == "Accepted")) {
           pendingCount++;
         }
+
+        if (isInstallation &&
+            (status == "Pending" ||
+                status == "Accepted")) {
+          pendingCount++;
+        }
+
+        // Today's Count
         if (job["createdAt"] != null) {
           try {
-            final jobDateUtc = DateTime.parse(job["createdAt"]);
-            final jobDateIST = jobDateUtc.add(const Duration(hours: 5, minutes: 30));
-            final isSameDay = jobDateIST.year == nowIST.year &&
-                jobDateIST.month == nowIST.month &&
-                jobDateIST.day == nowIST.day;
+            final jobDateUtc =
+            DateTime.parse(job["createdAt"]);
+
+            final jobDateIST =
+            jobDateUtc.add(
+              const Duration(
+                hours: 5,
+                minutes: 30,
+              ),
+            );
+
+            final isSameDay =
+                jobDateIST.year == nowIST.year &&
+                    jobDateIST.month ==
+                        nowIST.month &&
+                    jobDateIST.day ==
+                        nowIST.day;
+
             if (isSameDay) {
               todayCount++;
             }
           } catch (_) {}
         }
       }
-
       emit(TechnicianDashboardLoaded(
         allJobs: allData,
         activeJobs: activeJobs,
@@ -136,5 +230,65 @@ class TechnicianDashboardBloc extends Bloc<TechnicianDashboardEvent, TechnicianD
     } catch (e) {
       emit(TechnicianDashboardFailure(error: e.toString().replaceAll("Exception: ", "")));
     }
+  }
+  Future<void> _onAcceptInstallation(
+      AcceptInstallationRequested event,
+      Emitter<TechnicianDashboardState> emit,
+      ) async {
+
+    emit(TechnicianDashboardLoading());
+
+    try {
+
+      await acceptInstallationUsecase(
+        event.deviceId,
+      );
+
+      add(
+        FetchJobsRequested(
+          technicianId: event.technicianId,
+        ),
+      );
+
+    } catch (e) {
+
+      emit(
+        TechnicianDashboardFailure(
+          error: e.toString(),
+        ),
+      );
+
+    }
+
+  }
+  Future<void> _onRejectInstallation(
+      RejectInstallationRequested event,
+      Emitter<TechnicianDashboardState> emit,
+      ) async {
+
+    emit(TechnicianDashboardLoading());
+
+    try {
+
+      await rejectInstallationUsecase(
+        event.deviceId,
+      );
+
+      add(
+        FetchJobsRequested(
+          technicianId: event.technicianId,
+        ),
+      );
+
+    } catch (e) {
+
+      emit(
+        TechnicianDashboardFailure(
+          error: e.toString(),
+        ),
+      );
+
+    }
+
   }
 }

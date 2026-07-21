@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../bloc/technician_dashboard_bloc.dart';
 import 'service_detail_screen.dart';
+import 'installation_detail_screen.dart';
 
 class TechnicianDashboardPage extends StatefulWidget {
   final String technicianId;
@@ -217,38 +218,79 @@ class JobCard extends StatelessWidget {
   });
 
   Color getColor() {
-    switch (job["status"]) {
+
+    final status = job["type"] == "Installation"
+        ? job["technicianStatus"]
+        : job["status"];
+
+    switch (status) {
+
       case "Pending":
         return AppColors.statusOrange;
+
       case "Assigned":
       case "Accepted":
         return AppColors.statusBlue;
+
       case "Rejected":
         return AppColors.statusRed;
+
       case "Completed":
+      case "Installed":
         return AppColors.statusGreen;
+
       default:
         return AppColors.statusGreen;
+
     }
+
   }
 
   @override
   Widget build(BuildContext context) {
     final color = getColor();
 
+    final user = job["user"];
+
+    final bool isInstallation =
+        job["type"] == "Installation";
+
+    final String currentStatus = isInstallation
+        ? (job["technicianStatus"] ?? "")
+        : (job["status"] ?? "");
+
+    String location = "No Location";
+
+    if (user != null) {
+      final parts = [
+        user["area"],
+        user["district"],
+        user["state"],
+      ]
+          .where((e) => e != null && e.toString().trim().isNotEmpty)
+          .toList();
+
+      if (parts.isNotEmpty) {
+        location = parts.join(", ");
+      }
+    }
+
     return InkWell(
       borderRadius: BorderRadius.circular(16.r),
-      onTap: job["status"] == "Accepted"
+      onTap: job["technicianStatus"] == "Accepted" ||
+          job["status"] == "Accepted"
           ? () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ServiceDetailScreen(job: job),
-                ),
-              ).then((_) {
-                refresh();
-              });
-            }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => job["type"] == "Installation"
+                ? InstallationDetailScreen(job: job)
+                : ServiceDetailScreen(job: job),
+          ),
+        ).then((_) {
+          refresh();
+        });
+      }
           : null,
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
@@ -276,49 +318,106 @@ class JobCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    job["device"]?["deviceId"] ?? "No Device",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
+                    job["type"] == "Installation"
+                        ? job["deviceId"]
+                        : job["device"]?["deviceId"] ?? "No Device",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14.sp,
+                    ),
                   ),
                   SizedBox(height: 4.h),
-                  Text(
-                    job["type"] ?? "",
-                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13.sp),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          job["type"] == "Installation"
+                              ? "Installation"
+                              : job["type"] ?? "",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13.sp,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(.15),
+                          borderRadius: BorderRadius.circular(20.r),
+                        ),
+                        child: Text(
+                          currentStatus,
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11.sp,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 4.h),
+
                   Text(
-                    job["user"] != null
-                        ? "${job["user"]["area"] ?? ""}, ${job["user"]["district"] ?? ""}"
-                        : "No Location",
-                    style: TextStyle(fontSize: 12.sp, color: AppColors.textSecondary),
+                    location,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
+
                   if (job["assignedDate"] != null) ...[
                     SizedBox(height: 4.h),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 12.r, color: AppColors.textSecondary),
+                        Icon(
+                          Icons.calendar_today,
+                          size: 12.r,
+                          color: AppColors.textSecondary,
+                        ),
                         SizedBox(width: 6.w),
                         Text(
                           job["assignedDate"],
-                          style: TextStyle(fontSize: 12.sp, color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (job["assignedTimeSlot"] != null) ...[
-                    SizedBox(height: 4.h),
-                    Row(
-                      children: [
-                        Icon(Icons.access_time, size: 12.r, color: AppColors.textSecondary),
-                        SizedBox(width: 6.w),
-                        Text(
-                          job["assignedTimeSlot"],
-                          style: TextStyle(fontSize: 12.sp, color: AppColors.textSecondary),
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
                   ],
 
-                  if (job["status"] == "Assigned") ...[
+                  if (job["assignedTimeSlot"] != null) ...[
+                    SizedBox(height: 4.h),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 12.r,
+                          color: AppColors.textSecondary,
+                        ),
+                        SizedBox(width: 6.w),
+                        Text(
+                          job["assignedTimeSlot"],
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  if ((job["type"] == "Installation" &&
+                      job["technicianStatus"] == "Pending") ||
+                      (job["type"] != "Installation" &&
+                          job["status"] == "Assigned")) ...[
                     SizedBox(height: 8.h),
                     Row(
                       children: [
@@ -328,13 +427,26 @@ class JobCard extends StatelessWidget {
                               backgroundColor: AppColors.statusGreen,
                             ),
                             onPressed: () {
-                              context.read<TechnicianDashboardBloc>().add(
-                                    RespondJobRequested(
-                                      jobId: job["_id"],
-                                      action: "accept",
-                                      technicianId: technicianId,
-                                    ),
-                                  );
+                              if (job["type"] == "Installation") {
+
+                                context.read<TechnicianDashboardBloc>().add(
+                                  AcceptInstallationRequested(
+                                    deviceId: job["_id"],
+                                    technicianId: technicianId,
+                                  ),
+                                );
+
+                              } else {
+
+                                context.read<TechnicianDashboardBloc>().add(
+                                  RespondJobRequested(
+                                    jobId: job["_id"],
+                                    action: "accept",
+                                    technicianId: technicianId,
+                                  ),
+                                );
+
+                              }
                             },
                             child: const Text(
                               "Accept",
@@ -349,13 +461,26 @@ class JobCard extends StatelessWidget {
                               backgroundColor: AppColors.statusRed,
                             ),
                             onPressed: () {
-                              context.read<TechnicianDashboardBloc>().add(
-                                    RespondJobRequested(
-                                      jobId: job["_id"],
-                                      action: "reject",
-                                      technicianId: technicianId,
-                                    ),
-                                  );
+                              if (job["type"] == "Installation") {
+
+                                context.read<TechnicianDashboardBloc>().add(
+                                  RejectInstallationRequested(
+                                    deviceId: job["_id"],
+                                    technicianId: technicianId,
+                                  ),
+                                );
+
+                              } else {
+
+                                context.read<TechnicianDashboardBloc>().add(
+                                  RespondJobRequested(
+                                    jobId: job["_id"],
+                                    action: "reject",
+                                    technicianId: technicianId,
+                                  ),
+                                );
+
+                              }
                             },
                             child: const Text(
                               "Reject",
@@ -367,25 +492,44 @@ class JobCard extends StatelessWidget {
                     ),
                   ],
 
-                  if (job["status"] == "Accepted") ...[
+                  if (currentStatus == "Accepted") ...[
                     SizedBox(height: 8.h),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ServiceDetailScreen(job: job),
-                          ),
-                        ).then((_) {
-                          refresh();
-                        });
-                      },
-                      child: const Text(
-                        "Click Me",
-                        style: TextStyle(color: Colors.white),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => isInstallation
+                                  ? InstallationDetailScreen(job: job)
+                                  : ServiceDetailScreen(job: job),
+                            ),
+                          ).then((_) {
+                            refresh();
+                          });
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.play_circle_fill,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            SizedBox(width: 8.w),
+                            const Text(
+                              "Continue Installation",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

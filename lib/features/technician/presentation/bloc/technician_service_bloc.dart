@@ -35,6 +35,24 @@ class UploadProofRequested extends TechnicianServiceEvent {
   });
 }
 
+class CompleteInstallationRequested extends TechnicianServiceEvent {
+  final String deviceId;
+  final String imagePath;
+  final String ampere;
+  final String voltage;
+  final String flowRate;
+  final String comment;
+
+  CompleteInstallationRequested({
+    required this.deviceId,
+    required this.imagePath,
+    required this.ampere,
+    required this.voltage,
+    required this.flowRate,
+    required this.comment,
+  });
+}
+
 abstract class TechnicianServiceState {}
 
 class TechnicianServiceInitial extends TechnicianServiceState {}
@@ -44,6 +62,7 @@ class TechnicianServiceLoading extends TechnicianServiceState {}
 class TechnicianServiceReadingsSaved extends TechnicianServiceState {}
 
 class TechnicianServiceProofUploaded extends TechnicianServiceState {}
+class InstallationCompleted extends TechnicianServiceState {}
 
 class TechnicianServiceFailure extends TechnicianServiceState {
   final String error;
@@ -54,14 +73,17 @@ class TechnicianServiceBloc extends Bloc<TechnicianServiceEvent, TechnicianServi
   final SubmitReadingsUsecase submitReadingsUsecase;
   final CompleteJobUsecase completeJobUsecase;
   final PostAnalysisUsecase postAnalysisUsecase;
+  final CompleteInstallationUsecase completeInstallationUsecase;
 
   TechnicianServiceBloc({
     required this.submitReadingsUsecase,
     required this.completeJobUsecase,
     required this.postAnalysisUsecase,
+    required this.completeInstallationUsecase,
   }) : super(TechnicianServiceInitial()) {
     on<SubmitReadingsRequested>(_onSubmitReadingsRequested);
     on<UploadProofRequested>(_onUploadProofRequested);
+    on<CompleteInstallationRequested>(_onCompleteInstallationRequested);
   }
 
   Future<void> _onSubmitReadingsRequested(
@@ -105,6 +127,37 @@ class TechnicianServiceBloc extends Bloc<TechnicianServiceEvent, TechnicianServi
       emit(TechnicianServiceProofUploaded());
     } catch (e) {
       emit(TechnicianServiceFailure(error: e.toString().replaceAll("Exception: ", "")));
+    }
+  }
+  Future<void> _onCompleteInstallationRequested(
+      CompleteInstallationRequested event,
+      Emitter<TechnicianServiceState> emit,
+      ) async {
+    emit(TechnicianServiceLoading());
+
+    try {
+
+      await completeInstallationUsecase(
+        deviceId: event.deviceId,
+        imagePath: event.imagePath,
+        ampere: event.ampere,
+        voltage: event.voltage,
+        flowRate: event.flowRate,
+        comment: event.comment,
+      );
+
+      emit(InstallationCompleted());
+
+    } catch (e) {
+
+      emit(
+        TechnicianServiceFailure(
+          error: e.toString().replaceAll(
+            "Exception: ",
+            "",
+          ),
+        ),
+      );
     }
   }
 }
