@@ -23,6 +23,7 @@
   import 'features/customer/presentation/bloc/customer_history_bloc.dart';
   import 'features/customer/presentation/bloc/customer_profile_bloc.dart';
   import 'features/customer/presentation/bloc/customer_service_bloc.dart';
+  import 'features/customer/presentation/bloc/customer_report_bloc.dart';
 
   // Technician Feature
   import 'features/technician/data/datasources/technician_remote_data_source.dart';
@@ -69,6 +70,9 @@
     sl.registerLazySingleton(() => FetchComplaintHistoryUsecase(repository: sl()));
     sl.registerLazySingleton(() => FetchCustomerProfileUsecase(repository: sl()));
     sl.registerLazySingleton(() => UpdateCustomerProfileUsecase(repository: sl()));
+    sl.registerLazySingleton(() => FetchReportsUsecase(repository: sl()));
+
+    sl.registerLazySingleton(() => FetchReportDetailsUsecase(repository: sl()));
     // Blocs
     sl.registerFactory(() => CustomerDashboardBloc(
           fetchDeviceUsecase: sl(),
@@ -78,6 +82,13 @@
     sl.registerFactory(() => CustomerServiceBloc(submitComplaintUsecase: sl()));
     sl.registerFactory(() => CustomerHistoryBloc(fetchHistoryUsecase: sl()));
     sl.registerFactory(() => CustomerProfileBloc(fetchProfileUsecase: sl(), updateProfileUsecase: sl()));
+
+    sl.registerFactory(
+          () => CustomerReportBloc(
+        fetchReportsUsecase: sl(),
+        fetchReportDetailsUsecase: sl(),
+      ),
+    );
 
     // Technician Feature
     // Data Sources
@@ -106,6 +117,11 @@
 
     sl.registerLazySingleton(
           () => CompleteInstallationUsecase(
+        repository: sl(),
+      ),
+    );
+    sl.registerLazySingleton(
+          () => SaveConditionerSettingsUsecase(
         repository: sl(),
       ),
     );

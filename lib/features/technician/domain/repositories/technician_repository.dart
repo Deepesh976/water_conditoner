@@ -35,6 +35,14 @@ abstract class TechnicianRepository {
     required String comment,
   });
 
+  Future<void> saveConditionerSettings({
+    required String deviceId,
+    required double channel1Min,
+    required double channel1Max,
+    required double channel2Min,
+    required double channel2Max,
+  });
+
   Future<void> respondToJob({
     required String jobId,
     required String action,

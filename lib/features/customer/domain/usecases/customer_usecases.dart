@@ -71,3 +71,39 @@ class UpdateCustomerProfileUsecase {
     );
   }
 }
+
+// ================= REPORTS =================
+
+class FetchReportsUsecase {
+  final CustomerRepository repository;
+
+  FetchReportsUsecase({
+    required this.repository,
+  });
+
+  Future<List<dynamic>> call(
+      String userId,
+      ) async {
+    return await repository.fetchReports(
+      userId,
+    );
+  }
+}
+
+class FetchReportDetailsUsecase {
+  final CustomerRepository repository;
+
+  FetchReportDetailsUsecase({
+    required this.repository,
+  });
+
+  Future<Map<String, dynamic>> call({
+    required String userId,
+    required String reportDate,
+  }) async {
+    return await repository.fetchReportDetails(
+      userId: userId,
+      reportDate: reportDate,
+    );
+  }
+}

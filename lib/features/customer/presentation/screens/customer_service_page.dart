@@ -25,7 +25,7 @@ class CustomerServicePage extends StatefulWidget {
 class _CustomerServicePageState extends State<CustomerServicePage> {
   File? image;
   final picker = ImagePicker();
-  String issueType = "Low Pressure";
+  String issueType = "Power Issue";
   final descriptionController = TextEditingController();
   bool isCaptured = false;
 
@@ -89,26 +89,105 @@ class _CustomerServicePageState extends State<CustomerServicePage> {
             if (state is CustomerServiceSuccess) {
               showDialog(
                 context: context,
-                builder: (_) => AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16.r),
-                  ),
-                  title: const Text("Success"),
-                  content: const Text("Service request submitted"),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        setState(() {
-                          image = null;
-                          isCaptured = false;
-                          descriptionController.clear();
-                        });
-                      },
-                      child: const Text("OK"),
+                barrierDismissible: false,
+                builder: (_) {
+                  return Dialog(
+                    backgroundColor: Colors.transparent,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24.w,
+                        vertical: 28.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.12),
+                            blurRadius: 30,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+
+                          Container(
+                            width: 90.w,
+                            height: 90.w,
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.check_circle_rounded,
+                              color: Colors.green,
+                              size: 62.sp,
+                            ),
+                          ),
+
+                          SizedBox(height: 24.h),
+
+                          Text(
+                            "Request Submitted",
+                            style: TextStyle(
+                              fontSize: 22.sp,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+
+                          SizedBox(height: 12.h),
+
+                          Text(
+                            "Your service request has been submitted successfully.\nOur technician will contact you shortly.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15.sp,
+                              color: Colors.grey.shade700,
+                              height: 1.5,
+                            ),
+                          ),
+
+                          SizedBox(height: 28.h),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+
+                                setState(() {
+                                  image = null;
+                                  isCaptured = false;
+                                  issueType = "Power Issue";
+                                  descriptionController.clear();
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                backgroundColor: const Color(0xFF1976D2),
+                                padding: EdgeInsets.symmetric(vertical: 15.h),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16.r),
+                                ),
+                              ),
+                              child: Text(
+                                "Done",
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               );
             } else if (state is CustomerServiceFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -176,27 +255,102 @@ class _CustomerServicePageState extends State<CustomerServicePage> {
                         // Dropdown Selector
                         Container(
                           margin: EdgeInsets.symmetric(horizontal: 16.w),
-                          padding: EdgeInsets.symmetric(horizontal: 12.w),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10.r),
-                            border: Border.all(color: Colors.grey),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 15,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                           ),
-                          child: DropdownButton<String>(
+                          child: DropdownButtonFormField<String>(
                             value: issueType,
                             isExpanded: true,
-                            underline: const SizedBox(),
-                            items: const [
+                            icon: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEAF4FF),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Color(0xFF1976D2),
+                              ),
+                            ),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(
+                                Icons.report_problem_rounded,
+                                color: Color(0xFF1976D2),
+                              ),
+                              labelText: "Issue Type",
+                              labelStyle: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15.sp,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18.r),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18.r),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(18.r),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF1976D2),
+                                  width: 2,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding:
+                              EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
+                            ),
+                            borderRadius: BorderRadius.circular(18.r),
+                            dropdownColor: Colors.white,
+                            elevation: 8,
+                            items: [
                               DropdownMenuItem(
-                                value: "Low Pressure",
-                                child: Text("Low Pressure"),
+                                value: "Power Issue",
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 14),
+                                    const Text(
+                                      "Power Issue",
+                                      style: TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
                               ),
                               DropdownMenuItem(
-                                value: "Leakage",
-                                child: Text("Leakage"),
+                                value: "Water Quality Issue",
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 14),
+                                    const Text(
+                                      "Water Quality Issue",
+                                      style: TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
                               ),
                               DropdownMenuItem(
-                                value: "No Water",
-                                child: Text("No Water"),
+                                value: "Leakage Issue",
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 14),
+                                    const Text(
+                                      "Leakage Issue",
+                                      style: TextStyle(fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                             onChanged: (value) {

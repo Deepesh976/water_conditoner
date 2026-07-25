@@ -10,6 +10,12 @@ abstract class CustomerRepository {
   });
   Future<List<dynamic>> fetchComplaintHistory(String userId);
   Future<Map<String, dynamic>> fetchCustomerProfile(String userId);
+  Future<List<dynamic>> fetchReports(String userId);
+
+  Future<Map<String, dynamic>> fetchReportDetails({
+    required String userId,
+    required String reportDate,
+  });
   Future<Map<String, dynamic>> updateCustomerProfile({
     required String userId,
     required Map<String, dynamic> profileData,

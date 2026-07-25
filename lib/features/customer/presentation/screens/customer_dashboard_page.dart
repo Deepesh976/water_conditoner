@@ -364,14 +364,54 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
             _handleResetPopup(showReset, channel1, channel2, flowRate);
 
             // Channel Bad Alerts (only if not reset)
+// Channel Bad Alerts (only if not reset)
             final bool currentlyReset = showReset || isResetDone;
+
             if (!currentlyReset) {
-              if (channel1 > 0 && channel1 <= 30 && channel2 > 0 && channel2 <= 30) {
-                WidgetsBinding.instance.addPostFrameCallback((_) => showChannelAlert("Channel 1 and Channel 2 are BAD"));
-              } else if (channel1 > 0 && channel1 <= 30) {
-                WidgetsBinding.instance.addPostFrameCallback((_) => showChannelAlert("Channel 1 is BAD"));
-              } else if (channel2 > 0 && channel2 <= 30) {
-                WidgetsBinding.instance.addPostFrameCallback((_) => showChannelAlert("Channel 2 is BAD"));
+
+              final channel1Settings = state.conditionerSettings?["channel1"];
+              final channel2Settings = state.conditionerSettings?["channel2"];
+
+              double channel1Health = 100;
+              double channel2Health = 100;
+
+              if (channel1Settings != null) {
+                final min = (channel1Settings["minCurrent"] ?? 0).toDouble();
+                final max = (channel1Settings["maxCurrent"] ?? 100).toDouble();
+
+                if (max > min) {
+                  channel1Health =
+                      (((channel1 - min) / (max - min)) * 100)
+                          .clamp(0, 100);
+                }
+              }
+
+              if (channel2Settings != null) {
+                final min = (channel2Settings["minCurrent"] ?? 0).toDouble();
+                final max = (channel2Settings["maxCurrent"] ?? 100).toDouble();
+
+                if (max > min) {
+                  channel2Health =
+                      (((channel2 - min) / (max - min)) * 100)
+                          .clamp(0, 100);
+                }
+              }
+
+              final bool channel1Bad = channel1Health <= 30;
+              final bool channel2Bad = channel2Health <= 30;
+
+              if (channel1Bad && channel2Bad) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  showChannelAlert("Channel 1 and Channel 2 are BAD");
+                });
+              } else if (channel1Bad) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  showChannelAlert("Channel 1 is BAD");
+                });
+              } else if (channel2Bad) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  showChannelAlert("Channel 2 is BAD");
+                });
               }
             }
             _checkCompletedComplaints(state.complaints);
@@ -559,25 +599,17 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                             children: [
                               Expanded(
                                 child: gaugeCard(
-                                  "Channel 1",
-                                  channel1,
-                                  selectedMetricPressure == "Voltage"
-                                      ? 260
-                                      : selectedMetricPressure == "Ampere"
-                                          ? 20
-                                          : 100,
+                                  title: "Channel 1",
+                                  current: channel1,
+                                  settings: state.conditionerSettings?["channel1"],
                                 ),
                               ),
                               SizedBox(width: 10.w),
                               Expanded(
                                 child: gaugeCard(
-                                  "Channel 2",
-                                  channel2,
-                                  selectedMetricPressure == "Voltage"
-                                      ? 260
-                                      : selectedMetricPressure == "Ampere"
-                                          ? 20
-                                          : 100,
+                                  title: "Channel 2",
+                                  current: channel2,
+                                  settings: state.conditionerSettings?["channel2"],
                                 ),
                               ),
                             ],
@@ -964,19 +996,51 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     );
   }
 
-  Widget gaugeCard(String title, double value, double max) {
-    Color getGaugeColor(double v) {
-      if (v <= 30) return AppColors.statusRed;
-      if (v <= 70) return AppColors.statusOrange;
-      return AppColors.statusGreen;
+  Widget gaugeCard({
+    required String title,
+    required double current,
+    required Map<String, dynamic>? settings,
+  }) {
+    double minCurrent =
+    (settings?["minCurrent"] ?? 0).toDouble();
+
+    double maxCurrent =
+    (settings?["maxCurrent"] ?? 100).toDouble();
+    print("==========");
+    print("Title: $title");
+    print("Current: $current");
+    print("Settings: $settings");
+    print("Min: $minCurrent");
+    print("Max: $maxCurrent");
+    print("==========");
+
+
+    double health = 0;
+
+    if (maxCurrent > minCurrent) {
+      health =
+          ((current - minCurrent) /
+              (maxCurrent - minCurrent)) *
+              100;
+
+      health = health.clamp(0, 100);
     }
 
-    Color gaugeColor = getGaugeColor(value);
+    print("Health = $health");
 
-    String getStatus(double v) {
-      if (v <= 30) return "BAD";
-      if (v <= 70) return "OK";
-      return "GOOD";
+    Color gaugeColor;
+
+    String status;
+
+    if (health <= 30) {
+      gaugeColor = AppColors.statusRed;
+      status = "Bad";
+    } else if (health <= 70) {
+      gaugeColor = AppColors.statusOrange;
+      status = "Normal";
+    } else {
+      gaugeColor = AppColors.statusGreen;
+      status = "Good";
     }
 
     return Container(
@@ -998,7 +1062,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
               axes: [
                 gauges.RadialAxis(
                   minimum: 0,
-                  maximum: max,
+                  maximum: 100,
                   startAngle: 135,
                   endAngle: 45,
                   showLabels: false,
@@ -1009,13 +1073,13 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                   ),
                   pointers: [
                     gauges.RangePointer(
-                      value: value,
+                      value: health,
                       width: 10,
                       cornerStyle: gauges.CornerStyle.bothCurve,
                       color: gaugeColor,
                     ),
                     gauges.MarkerPointer(
-                      value: value,
+                      value: health,
                       markerType: gauges.MarkerType.circle,
                       color: Colors.white,
                       borderColor: gaugeColor,
@@ -1029,9 +1093,8 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                       widget: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("SCORE", style: TextStyle(fontSize: 10.sp)),
                           Text(
-                            value.toInt().toString(),
+                            health.toInt().toString(),
                             style: TextStyle(
                               fontSize: 24.sp,
                               fontWeight: FontWeight.bold,
@@ -1050,6 +1113,25 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
             ),
           ),
           SizedBox(height: 5.h),
+          Text(
+            "Current",
+            style: TextStyle(
+              fontSize: 11.sp,
+              color: Colors.grey,
+            ),
+          ),
+
+          SizedBox(height: 2.h),
+
+          Text(
+            "${current.toStringAsFixed(1)} A",
+            style: TextStyle(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          SizedBox(height: 8.h),
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 5.h),
             decoration: BoxDecoration(
@@ -1057,7 +1139,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: Text(
-              getStatus(value),
+              status,
               style: TextStyle(color: gaugeColor, fontWeight: FontWeight.bold, fontSize: 12.sp),
             ),
           ),

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import 'installation_upload_screen.dart';
+// import 'installation_upload_screen.dart';
+import 'conditioner_settings_screen.dart';
 
 class InstallationWorkScreen extends StatefulWidget {
   final Map<String, dynamic> job;
@@ -65,7 +66,7 @@ class _InstallationWorkScreenState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => InstallationUploadScreen(
+        builder: (_) => ConditionerSettingsScreen(
           job: widget.job,
         ),
       ),

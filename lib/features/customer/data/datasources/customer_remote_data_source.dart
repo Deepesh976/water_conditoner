@@ -15,6 +15,12 @@ abstract class CustomerRemoteDataSource {
   });
   Future<List<dynamic>> fetchComplaintHistory(String userId);
   Future<Map<String, dynamic>> fetchCustomerProfile(String userId);
+  Future<List<dynamic>> fetchReports(String userId);
+
+  Future<Map<String, dynamic>> fetchReportDetails({
+    required String userId,
+    required String reportDate,
+  });
   Future<Map<String, dynamic>> updateCustomerProfile({
     required String userId,
     required Map<String, dynamic> profileData,
@@ -99,6 +105,37 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
       return jsonDecode(response.body);
     } else {
       throw Exception("Failed to load user profile");
+    }
+  }
+
+  @override
+  Future<List<dynamic>> fetchReports(String userId) async {
+    final response = await apiClient.get(
+      "${ApiEndpoints.baseUrl}/api/reports/$userId",
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data["reports"] ?? [];
+    } else {
+      throw Exception("Failed to load reports");
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchReportDetails({
+    required String userId,
+    required String reportDate,
+  }) async {
+    final response = await apiClient.get(
+      "${ApiEndpoints.baseUrl}/api/reports/$userId/$reportDate",
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data["report"];
+    } else {
+      throw Exception("Failed to load report details");
     }
   }
 

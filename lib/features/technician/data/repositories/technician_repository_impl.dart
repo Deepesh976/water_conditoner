@@ -71,6 +71,22 @@ class TechnicianRepositoryImpl implements TechnicianRepository {
     );
   }
 
+  @override
+  Future<void> saveConditionerSettings({
+    required String deviceId,
+    required double channel1Min,
+    required double channel1Max,
+    required double channel2Min,
+    required double channel2Max,
+  }) async {
+    await remoteDataSource.saveConditionerSettings(
+      deviceId: deviceId,
+      channel1Min: channel1Min,
+      channel1Max: channel1Max,
+      channel2Min: channel2Min,
+      channel2Max: channel2Max,
+    );
+  }
 
   @override
   Future<void> respondToJob({required String jobId, required String action}) async {

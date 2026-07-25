@@ -108,6 +108,32 @@ class CompleteInstallationUsecase {
   }
 }
 
+/// ================= SAVE CONDITIONER SETTINGS =================
+
+class SaveConditionerSettingsUsecase {
+  final TechnicianRepository repository;
+
+  SaveConditionerSettingsUsecase({
+    required this.repository,
+  });
+
+  Future<void> call({
+    required String deviceId,
+    required double channel1Min,
+    required double channel1Max,
+    required double channel2Min,
+    required double channel2Max,
+  }) async {
+    await repository.saveConditionerSettings(
+      deviceId: deviceId,
+      channel1Min: channel1Min,
+      channel1Max: channel1Max,
+      channel2Min: channel2Min,
+      channel2Max: channel2Max,
+    );
+  }
+}
+
 /// ================= RESPOND TO JOB =================
 
 class RespondToJobUsecase {

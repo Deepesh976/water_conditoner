@@ -32,6 +32,14 @@ abstract class TechnicianRemoteDataSource {
     required String comment,
   });
 
+  Future<void> saveConditionerSettings({
+    required String deviceId,
+    required double channel1Min,
+    required double channel1Max,
+    required double channel2Min,
+    required double channel2Max,
+  });
+
   Future<void> respondToJob({required String jobId, required String action});
   Future<void> submitReadings({
     required String jobId,
@@ -169,30 +177,52 @@ class TechnicianRemoteDataSourceImpl implements TechnicianRemoteDataSource {
     final streamedResponse =
     await apiClient.multipartRequest(
       method: "PUT",
-      url: ApiEndpoints.completeInstallation(
-        deviceId,
-      ),
-
+      url: ApiEndpoints.completeInstallation(deviceId),
       fields: {
         "ampere": ampere,
         "voltage": voltage,
         "flowRate": flowRate,
         "comment": comment,
       },
-
-      files: [
-        image,
-      ],
+      files: [image],
     );
 
     final response =
-    await http.Response.fromStream(
-      streamedResponse,
-    );
+    await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200) {
       throw Exception(
         "Failed to complete installation",
+      );
+    }
+  }
+
+  @override
+  Future<void> saveConditionerSettings({
+    required String deviceId,
+    required double channel1Min,
+    required double channel1Max,
+    required double channel2Min,
+    required double channel2Max,
+  }) async {
+
+    final response = await apiClient.put(
+      ApiEndpoints.conditionerSettings(deviceId),
+      body: {
+        "channel1": {
+          "minCurrent": channel1Min,
+          "maxCurrent": channel1Max,
+        },
+        "channel2": {
+          "minCurrent": channel2Min,
+          "maxCurrent": channel2Max,
+        },
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        "Failed to save conditioner settings",
       );
     }
   }

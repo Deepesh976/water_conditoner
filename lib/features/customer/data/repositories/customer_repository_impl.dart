@@ -44,6 +44,22 @@ class CustomerRepositoryImpl implements CustomerRepository {
   }
 
   @override
+  Future<List<dynamic>> fetchReports(String userId) async {
+    return await remoteDataSource.fetchReports(userId);
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchReportDetails({
+    required String userId,
+    required String reportDate,
+  }) async {
+    return await remoteDataSource.fetchReportDetails(
+      userId: userId,
+      reportDate: reportDate,
+    );
+  }
+
+  @override
   Future<Map<String, dynamic>> updateCustomerProfile({
     required String userId,
     required Map<String, dynamic> profileData,

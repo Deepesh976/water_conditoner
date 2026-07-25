@@ -11,6 +11,9 @@ class ApiEndpoints {
   static const String complaints =
       "$baseUrl/api/complaints";
 
+  static String conditionerSettings(String deviceId) =>
+      "$baseUrl/api/conditioner-settings/$deviceId";
+
   static String technicianHistory(
       String technicianId,
       ) =>

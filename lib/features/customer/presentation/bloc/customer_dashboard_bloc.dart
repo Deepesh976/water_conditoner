@@ -24,6 +24,7 @@ class CustomerDashboardLoaded extends CustomerDashboardState {
   final String deviceId;
   final String deviceName;
   final Map<String, dynamic> analysisData;
+  final Map<String, dynamic>? conditionerSettings;
   final List<dynamic> complaints;
 
   CustomerDashboardLoaded({
@@ -31,6 +32,7 @@ class CustomerDashboardLoaded extends CustomerDashboardState {
     required this.deviceName,
     required this.analysisData,
     required this.complaints,
+    this.conditionerSettings,
   });
 }
 
@@ -68,6 +70,7 @@ class CustomerDashboardBloc
 
       final deviceId = deviceData["_id"] ?? "";
       final deviceName = deviceData["deviceId"] ?? "RO Device";
+      final conditionerSettings = deviceData["conditionerSettings"];
 
       print("🔥 DEVICE ID FROM BACKEND: $deviceId");
 
@@ -85,12 +88,15 @@ class CustomerDashboardBloc
       final complaints =
       await fetchComplaintHistoryUsecase(event.userId);
 
-      emit(CustomerDashboardLoaded(
-        deviceId: deviceId,
-        deviceName: deviceName,
-        analysisData: analysisData,
-        complaints: complaints,
-      ));
+      emit(
+        CustomerDashboardLoaded(
+          deviceId: deviceId,
+          deviceName: deviceName,
+          analysisData: analysisData,
+          complaints: complaints,
+          conditionerSettings: conditionerSettings,
+        ),
+      );
     } catch (e) {
       print("❌ LOAD ERROR: $e");
       emit(CustomerDashboardFailure(
@@ -114,17 +120,27 @@ class CustomerDashboardBloc
 
       String prevDeviceName = "RO Device";
 
+      Map<String, dynamic>? conditionerSettings;
+
       if (state is CustomerDashboardLoaded) {
+
         prevDeviceName =
             (state as CustomerDashboardLoaded).deviceName;
+
+        conditionerSettings =
+            (state as CustomerDashboardLoaded)
+                .conditionerSettings;
       }
 
-      emit(CustomerDashboardLoaded(
-        deviceId: event.deviceId,
-        deviceName: prevDeviceName,
-        analysisData: analysisData,
-        complaints: complaints,
-      ));
+      emit(
+        CustomerDashboardLoaded(
+          deviceId: event.deviceId,
+          deviceName: prevDeviceName,
+          analysisData: analysisData,
+          complaints: complaints,
+          conditionerSettings: conditionerSettings,
+        ),
+      );
     } catch (e) {
       print("❌ REFRESH ERROR: $e");
       emit(CustomerDashboardFailure(
