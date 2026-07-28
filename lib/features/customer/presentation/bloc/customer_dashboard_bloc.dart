@@ -63,30 +63,26 @@ class CustomerDashboardBloc
 
     try {
       print("🔥 LOAD DASHBOARD for userId: ${event.userId}");
-
       final deviceData = await fetchDeviceUsecase(event.userId);
 
-      print("🔥 DEVICE DATA FROM API: $deviceData");
+      print(deviceData);
 
       final deviceId = deviceData["_id"] ?? "";
       final deviceName = deviceData["deviceId"] ?? "RO Device";
       final conditionerSettings = deviceData["conditionerSettings"];
 
-      print("🔥 DEVICE ID FROM BACKEND: $deviceId");
+      print("Device Mongo ID: $deviceId");
 
-      if (deviceId.isEmpty) {
-        print("❌ No device assigned");
-        emit(CustomerDashboardFailure(message: "No device assigned."));
-        return;
-      }
+      final analysisData = await fetchDashboardDataUsecase(deviceId);
 
-      final analysisData =
-      await fetchDashboardDataUsecase(deviceId);
+      print(analysisData);
 
-      print("🔥 INITIAL API RESPONSE: $analysisData");
 
-      final complaints =
-      await fetchComplaintHistoryUsecase(event.userId);
+      final complaints = await fetchComplaintHistoryUsecase(event.userId);
+
+
+      print(complaints.length);
+
 
       emit(
         CustomerDashboardLoaded(

@@ -376,24 +376,32 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
               double channel2Health = 100;
 
               if (channel1Settings != null) {
-                final min = (channel1Settings["minCurrent"] ?? 0).toDouble();
-                final max = (channel1Settings["maxCurrent"] ?? 100).toDouble();
+                final min =
+                (channel1Settings["minCurrent"] as num? ?? 0).toDouble();
+
+                final max =
+                (channel1Settings["maxCurrent"] as num? ?? 100).toDouble();
 
                 if (max > min) {
                   channel1Health =
-                      (((channel1 - min) / (max - min)) * 100)
-                          .clamp(0, 100);
+                      ((((channel1 - min) / (max - min)) * 100)
+                          .clamp(0.0, 100.0))
+                          .toDouble();
                 }
               }
 
               if (channel2Settings != null) {
-                final min = (channel2Settings["minCurrent"] ?? 0).toDouble();
-                final max = (channel2Settings["maxCurrent"] ?? 100).toDouble();
+                final min =
+                (channel2Settings["minCurrent"] as num? ?? 0).toDouble();
+
+                final max =
+                (channel2Settings["maxCurrent"] as num? ?? 100).toDouble();
 
                 if (max > min) {
                   channel2Health =
-                      (((channel2 - min) / (max - min)) * 100)
-                          .clamp(0, 100);
+                      ((((channel2 - min) / (max - min)) * 100)
+                          .clamp(0.0, 100.0))
+                          .toDouble();
                 }
               }
 
@@ -443,9 +451,12 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
           } else if (state is CustomerDashboardLoaded) {
             final data = state.analysisData;
             final latest = data["latest"] ?? {};
-            
-            final double channel1 = isResetDone ? 0 : (latest["channel1"] ?? 0).toDouble();
-            final double channel2 = isResetDone ? 0 : (latest["channel2"] ?? 0).toDouble();
+
+            final double channel1 =
+            isResetDone ? 0.0 : (latest["channel1"] ?? 0).toDouble();
+
+            final double channel2 =
+            isResetDone ? 0.0 : (latest["channel2"] ?? 0).toDouble();
 
             // Prepare flow chart data (last 7 days)
             final flowHistory = data["flowHistory"] ?? [];
@@ -527,7 +538,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                 tempPressure.add(
                   ChartData(
                     time,
-                    ((d["alert"] ?? 0) > 0) ? 1 : 0,
+                    ((d["alert"] ?? 0) > 0) ? 1.0 : 0.0,
                     d["alert"] ?? 0,
                   ),
                 );
@@ -973,7 +984,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                             children: [
                               legendItem(1, "Max Voltage"),
                               legendItem(2, "Min Voltage"),
-                              legendItem(3, "Low Flow"),
+                              legendItem(3, "LPS Trip"),
                               legendItem(4, "Over Amp C1"),
                               legendItem(5, "Under Amp C1"),
                               legendItem(6, "Over Amp C2"),
