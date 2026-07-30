@@ -90,6 +90,20 @@ class FetchReportsUsecase {
   }
 }
 
+//==================================================
+// FETCH CUSTOMER ALERTS
+//==================================================
+
+class FetchCustomerAlertsUsecase {
+  final CustomerRepository repository;
+
+  FetchCustomerAlertsUsecase(this.repository);
+
+  Future<List<dynamic>> call(String userId) {
+    return repository.fetchCustomerAlerts(userId);
+  }
+}
+
 class FetchReportDetailsUsecase {
   final CustomerRepository repository;
 

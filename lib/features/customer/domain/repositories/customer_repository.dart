@@ -16,6 +16,14 @@ abstract class CustomerRepository {
     required String userId,
     required String reportDate,
   });
+
+  //==================================================
+// ALERT HISTORY
+//==================================================
+
+  Future<List<dynamic>> fetchCustomerAlerts(
+      String userId,
+      );
   Future<Map<String, dynamic>> updateCustomerProfile({
     required String userId,
     required Map<String, dynamic> profileData,

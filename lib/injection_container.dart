@@ -24,6 +24,7 @@
   import 'features/customer/presentation/bloc/customer_profile_bloc.dart';
   import 'features/customer/presentation/bloc/customer_service_bloc.dart';
   import 'features/customer/presentation/bloc/customer_report_bloc.dart';
+  import 'features/customer/presentation/bloc/customer_alert_bloc.dart';
 
   // Technician Feature
   import 'features/technician/data/datasources/technician_remote_data_source.dart';
@@ -73,6 +74,12 @@
     sl.registerLazySingleton(() => FetchReportsUsecase(repository: sl()));
 
     sl.registerLazySingleton(() => FetchReportDetailsUsecase(repository: sl()));
+
+    sl.registerLazySingleton(
+          () => FetchCustomerAlertsUsecase(
+        sl(),
+      ),
+    );
     // Blocs
     sl.registerFactory(() => CustomerDashboardBloc(
           fetchDeviceUsecase: sl(),
@@ -87,6 +94,12 @@
           () => CustomerReportBloc(
         fetchReportsUsecase: sl(),
         fetchReportDetailsUsecase: sl(),
+      ),
+    );
+
+    sl.registerFactory(
+          () => CustomerAlertBloc(
+        fetchCustomerAlertsUsecase: sl(),
       ),
     );
 

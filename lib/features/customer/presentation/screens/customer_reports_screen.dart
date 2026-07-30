@@ -23,15 +23,25 @@ class CustomerReportsScreen extends StatefulWidget {
 class _CustomerReportsScreenState
     extends State<CustomerReportsScreen> {
 
+  late final CustomerReportBloc _reportBloc;
+
   @override
   void initState() {
     super.initState();
 
-    sl<CustomerReportBloc>().add(
+    _reportBloc = sl<CustomerReportBloc>();
+
+    _reportBloc.add(
       FetchReportsRequested(
         userId: widget.userId,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _reportBloc.close();
+    super.dispose();
   }
 
   String formatDate(String date) {
@@ -73,7 +83,7 @@ class _CustomerReportsScreenState
           ),
         ),
         body: BlocBuilder<CustomerReportBloc, CustomerReportState>(
-            bloc: sl<CustomerReportBloc>(),
+          bloc: _reportBloc,
             builder: (context, state) {          if (state is CustomerReportLoading) {
               return const Center(
                 child: CircularProgressIndicator(),

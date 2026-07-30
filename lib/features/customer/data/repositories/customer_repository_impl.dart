@@ -69,4 +69,17 @@ class CustomerRepositoryImpl implements CustomerRepository {
       profileData: profileData,
     );
   }
+  //==================================================
+// FETCH CUSTOMER ALERT HISTORY
+//==================================================
+
+  @override
+  Future<List<dynamic>> fetchCustomerAlerts(
+      String userId,
+      ) async {
+    return await remoteDataSource.fetchCustomerAlerts(
+      userId,
+    );
+  }
 }
+

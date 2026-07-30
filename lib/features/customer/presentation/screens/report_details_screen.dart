@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../injection_container.dart';
 import '../bloc/customer_report_bloc.dart';
+import '../../../../core/services/pdf_service.dart';
+import 'dart:io';
 
 class ReportDetailsScreen extends StatefulWidget {
   final String userId;
@@ -24,16 +26,26 @@ class ReportDetailsScreen extends StatefulWidget {
 class _ReportDetailsScreenState
     extends State<ReportDetailsScreen> {
 
+  late final CustomerReportBloc _reportBloc;
+
   @override
   void initState() {
     super.initState();
 
-    sl<CustomerReportBloc>().add(
+    _reportBloc = sl<CustomerReportBloc>();
+
+    _reportBloc.add(
       FetchReportDetailsRequested(
         userId: widget.userId,
         reportDate: widget.reportDate,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _reportBloc.close();
+    super.dispose();
   }
 
   String formatDate(String date) {
@@ -72,6 +84,43 @@ class _ReportDetailsScreenState
     d.hour >= 12 ? "PM" : "AM";
 
     return "$hour:$minute $amPm";
+  }
+
+  Future<void> _downloadReport(
+      Map<String, dynamic> report,
+      ) async {
+
+    try {
+
+      final File file =
+      await PdfService.generateDailyReport(
+        report: report,
+      );
+
+      await PdfService.openPdf(file);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Report downloaded successfully ✅",
+          ),
+        ),
+      );
+
+    } catch (e) {
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Failed to generate PDF\n$e",
+          ),
+        ),
+      );
+    }
   }
 
   Widget buildInfoCard(
@@ -154,7 +203,7 @@ class _ReportDetailsScreenState
         ),
 
         body: BlocBuilder<CustomerReportBloc, CustomerReportState>(
-            bloc: sl<CustomerReportBloc>(),
+          bloc: _reportBloc,
             builder: (context, state) {
 
               if (state is CustomerReportLoading) {
@@ -229,6 +278,36 @@ class _ReportDetailsScreenState
                         "${report["averageFlowRate"]} Lt/Hr",
                         Icons.water_drop,
                         Colors.lightBlue,
+                      ),
+
+                      SizedBox(height: 20.h),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52.h,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            _downloadReport(report);
+                          },
+                          icon: const Icon(
+                            Icons.download,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            "Download Report",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryBlue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(14.r),
+                            ),
+                          ),
+                        ),
                       ),
 
                       SizedBox(height: 30.h),

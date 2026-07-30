@@ -7,6 +7,10 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart' as gauges;
 import '../../../../core/constants/app_colors.dart';
 import '../bloc/customer_dashboard_bloc.dart';
+import 'all_alerts_screen.dart';
+import '../../../../injection_container.dart';
+import '../bloc/customer_alert_bloc.dart';
+import 'dart:async';
 
 class ChartData {
   final DateTime x;
@@ -41,6 +45,7 @@ class CustomerDashboardPage extends StatefulWidget {
 }
 
 class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
+  Timer? _refreshTimer;
   String selectedMetricFlow = "Lt/Hr";
   String selectedMetricPressure = "Lt/Hr";
   bool isResetDone = false;
@@ -52,7 +57,36 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   @override
   void initState() {
     super.initState();
+
+    // Load latest values immediately
     _loadDashboardData();
+
+    // Refresh once after ESP boots (10–15 sec)
+    Future.delayed(const Duration(seconds: 15), () {
+      if (!mounted) return;
+
+      context.read<CustomerDashboardBloc>().add(
+        RefreshDashboard(
+          deviceId: widget.deviceId,
+          userId: widget.userId,
+        ),
+      );
+    });
+
+    // Refresh every 3 minutes 5 second
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 185),
+          (_) {
+        if (!mounted) return;
+
+        context.read<CustomerDashboardBloc>().add(
+          RefreshDashboard(
+            deviceId: widget.deviceId,
+            userId: widget.userId,
+          ),
+        );
+      },
+    );
   }
 
   void _loadDashboardData() {
@@ -992,6 +1026,48 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
                               legendItem(8, "Service Mode"),
                             ],
                           ),
+                          SizedBox(height: 20.h),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50.h,
+                            child: ElevatedButton.icon(
+                              icon: const Icon(
+                                Icons.warning_amber_rounded,
+                                color: Colors.white,
+                              ),
+                              label: const Text(
+                                "Show All Alerts",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14.r),
+                                ),
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BlocProvider(
+                                      create: (_) => sl<CustomerAlertBloc>()
+                                        ..add(
+                                          FetchCustomerAlertsRequested(
+                                            userId: widget.userId,
+                                          ),
+                                        ),
+                                      child: AllAlertsScreen(
+                                        userId: widget.userId,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1186,7 +1262,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         return "Min Voltage Fault";
 
       case 3:
-        return "Low Flow";
+        return "LPS Trip";
 
       case 4:
         return "Over Ampere Trip Current 1";
@@ -1307,5 +1383,10 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         },
       ),
     );
+  }
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 }

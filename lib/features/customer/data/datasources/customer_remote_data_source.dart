@@ -21,6 +21,16 @@ abstract class CustomerRemoteDataSource {
     required String userId,
     required String reportDate,
   });
+
+  //==================================================
+// ALERT HISTORY
+//==================================================
+
+  Future<List<dynamic>> fetchCustomerAlerts(
+      String userId,
+      );
+
+
   Future<Map<String, dynamic>> updateCustomerProfile({
     required String userId,
     required Map<String, dynamic> profileData,
@@ -153,6 +163,34 @@ class CustomerRemoteDataSourceImpl implements CustomerRemoteDataSource {
       return jsonDecode(response.body);
     } else {
       throw Exception("Failed to update profile");
+    }
+  }
+
+  //==================================================
+// FETCH CUSTOMER ALERT HISTORY
+//==================================================
+
+  @override
+  Future<List<dynamic>> fetchCustomerAlerts(
+      String userId,
+      ) async {
+
+    final response = await apiClient.get(
+      "${ApiEndpoints.baseUrl}/api/alerts/user/$userId",
+    );
+
+    if (response.statusCode == 200) {
+
+      final data = jsonDecode(response.body);
+
+      return data["alerts"] ?? [];
+
+    } else {
+
+      throw Exception(
+        "Failed to load alerts",
+      );
+
     }
   }
 }

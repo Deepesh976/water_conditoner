@@ -58,8 +58,13 @@ class CustomerDashboardBloc
 
   // ================= LOAD DASHBOARD =================
   Future<void> _onLoadDashboard(
-      LoadDashboard event, Emitter<CustomerDashboardState> emit) async {
-    emit(CustomerDashboardLoading());
+      LoadDashboard event,
+      Emitter<CustomerDashboardState> emit) async {
+
+    // Show loading only the first time
+    if (state is! CustomerDashboardLoaded) {
+      emit(CustomerDashboardLoading());
+    }
 
     try {
       print("🔥 LOAD DASHBOARD for userId: ${event.userId}");
